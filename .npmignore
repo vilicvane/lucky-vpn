@@ -1,0 +1,9 @@
+/.vscode/
+
+/src/
+/typings/
+/bld/daemon/
+
+/tsconfig.json
+
+.*
