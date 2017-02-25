@@ -27,12 +27,8 @@
   "dependencies": {
     "clime": "^0.4.3",
     "handlebars": "^4.0.6",
-    "native-dns-packet": "^0.1.1",
     "node-fetch": "^1.6.3",
     "villa": "^0.2.9"
-  },
-  "optionalDependencies": {
-    "node-windows": "^0.1.14"
   },
   "devDependencies": {
     "@types/handlebars": "^4.0.31",
