@@ -12,9 +12,6 @@ if errorlevel 1 (
 echo Connecting {{entry}}...
 rasdial "{{entry}}"{{#if username}} "{{username}}"{{#if password}} "{{password}}"{{/if}}{{/if}}{{#if phonebook}} /phonebook:"{{phonebook}}"{{/if}} || goto :error
 
-echo Flushing DNS...
-ipconfig /flushdns 1>nul
-
 {{#if dnsServers}}
 echo Overriding DNS servers...
 netsh interface ipv4 delete dnsservers "{{entry}}" all 1>nul
@@ -22,6 +19,9 @@ netsh interface ipv4 delete dnsservers "{{entry}}" all 1>nul
 netsh interface ipv4 add dnsservers "{{../entry}}" {{this}} validate=no 1>nul
 {{/each}}
 {{/if}}
+
+echo Flushing DNS...
+ipconfig /flushdns 1>nul
 
 echo Querying gateway...
 for /F "tokens=3" %%* in ('route print ^| findstr "\<0.0.0.0\>"') do (
