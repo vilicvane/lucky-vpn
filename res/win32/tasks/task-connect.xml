@@ -33,7 +33,7 @@
   </Settings>
   <Actions Context="Author">
     <Exec>
-      <Command>C:\Users\vilicvane\Desktop\task-test.js</Command>
+      <Command>C:\path\to\vpn-up.bat</Command>
       <Arguments></Arguments>
     </Exec>
   </Actions>

@@ -39,7 +39,9 @@ If there are multiple DNS servers to specify, use `,` to separate.
 
 ### Tips
 
-Use Lucky VPN (the goal is similar to [ChinaDNS](https://github.com/shadowsocks/ChinaDNS) but it's Windows-friendly) along with [Lucky DNS](https://github.com/vilic/lucky-dns) to get even better experience.
+- Use Lucky VPN (the goal is similar to [ChinaDNS](https://github.com/shadowsocks/ChinaDNS) but it's Windows-friendly) along with [Lucky DNS](https://github.com/vilic/lucky-dns) to get even better experience.
+- Add a task to Task Scheduler to run `vpn-up.bat` or `route-add.bat` on network connection.
+  > Check out the [task template](res/win32/tasks/task-connect.xml) you may import to Task Scheduler.
 
 ## Build
 
