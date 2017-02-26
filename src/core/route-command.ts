@@ -92,7 +92,9 @@ class WindowsRouteCommand implements RouteCommand {
   }
 
   static async getRouteTableInfo(): Promise<RouteTableInfo> {
-    let routeTableOutput = await v.call(exec, 'route print');
+    let routeTableOutput = await v.call(exec, 'route print', {
+      maxBuffer: 5 * 1024 * 1024
+    });
     let networkRegex = /^\s*\d+(?:\.\d+){3}/mg;
     let gatewayRegex = /^\s*0\.0\.0\.0\s+0\.0\.0\.0\s+(\d+(?:\.\d+){3})/m;
     let addedNetworks = (routeTableOutput.match(networkRegex) || []).map(network => network.trim());
