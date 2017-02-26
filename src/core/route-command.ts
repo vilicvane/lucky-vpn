@@ -33,8 +33,13 @@ interface RouteTableInfo {
 
 class WindowsRouteCommand implements RouteCommand {
   private execute(command: string): Promise<void> {
-    return new Promise<void>(resolve => {
+    return new Promise<void>((resolve, reject) => {
       exec(command, (error, stdout, stderr) => {
+        if (error && stdout && !stderr) {
+          reject(new ExpectedError('Error executing command, try run as administrator'));
+          return;
+        }
+
         process.stderr.write(stderr);
         resolve();
       });

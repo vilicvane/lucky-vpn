@@ -75,18 +75,20 @@ export default class extends Command {
 
     await v.call(FS.writeFile, LOCK_FILE_PATH, '');
 
-    let routeCommand = RouteCommand.getCommand();
+    try {
+      let routeCommand = RouteCommand.getCommand();
 
-    switch (operation) {
-      case 'add':
-        await routeCommand.add(routes, { metric: options.routeMetric }, createProgressLogger('add'));
-        break;
-      case 'delete':
-        await routeCommand.delete(routes, createProgressLogger('delete'));
-        break;
+      switch (operation) {
+        case 'add':
+          await routeCommand.add(routes, { metric: options.routeMetric }, createProgressLogger('add'));
+          break;
+        case 'delete':
+          await routeCommand.delete(routes, createProgressLogger('delete'));
+          break;
+      }
+    } finally {
+      await v.call(FS.unlink, LOCK_FILE_PATH);
     }
-
-    await v.call(FS.unlink, LOCK_FILE_PATH);
   }
 }
 
