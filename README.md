@@ -18,7 +18,7 @@ lvpn generate "VPN Connection Name"
 .\vpn-up.bat
 .\vpn-down.bat
 
-# Try following command for more usage information
+# Try following commands for more usage information
 lvpn generate --help
 lvpn route --help
 ```
