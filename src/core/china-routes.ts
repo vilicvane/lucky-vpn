@@ -98,15 +98,6 @@ async function getChinaRoutes({ minSize }: GetRoutesOptions): Promise<RoutesInfo
     let network = convertIPv4StringToInteger(networkStr);
     let size = Number(parts[4]);
 
-    if (rawRoutes.length) {
-      let lastRoute = rawRoutes[rawRoutes.length - 1];
-      let lastAddressEnd = lastRoute.network + lastRoute.size;
-      if (lastAddressEnd === network) {
-        lastRoute.size += size;
-        continue;
-      }
-    }
-
     rawRoutes.push({
       networkStr,
       network,
@@ -117,7 +108,19 @@ async function getChinaRoutes({ minSize }: GetRoutesOptions): Promise<RoutesInfo
   let total = 0;
   let covered = 0;
 
-  let routes: Route[] = rawRoutes
+  let routes: Route[] = lines
+    .map(line => {
+      let parts = line.split('|');
+      let networkStr = parts[3];
+      let network = convertIPv4StringToInteger(networkStr);
+      let size = Number(parts[4]);
+
+      return {
+        networkStr,
+        network,
+        size
+      };
+    })
     .filter(({ size }) => {
       total += size;
       if (size >= minSize) {

@@ -25,8 +25,8 @@ export class GenerateOptions extends Options {
 
   @option({
     flag: 's',
-    description: 'Filter routes by minimum size',
-    default: Infinity
+    description: 'Filter route rules by minimum size',
+    default: 0
   })
   routeMinSize: number;
 
