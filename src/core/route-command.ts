@@ -71,10 +71,21 @@ class WindowsRouteCommand implements RouteCommand {
   }
 
   async add(routes: string[], options: RouteCommandAddOptions, progress: RouteCommandProgressHandler): Promise<void> {
+    let possiblyAddedNetworkSet = await WindowsRouteCommand.getPossiblyAddedNetworkSet();
+    routes = routes.filter(route => !possiblyAddedNetworkSet.has(route.split('/')[0]));
     await this.operate(routes, route => `route add ${route} ${options.gateway} metric ${options.metric}`, progress);
   }
 
   async delete(routes: string[], progress: RouteCommandProgressHandler): Promise<void> {
+    let possiblyAddedNetworkSet = await WindowsRouteCommand.getPossiblyAddedNetworkSet();
+    routes = routes.filter(route => possiblyAddedNetworkSet.has(route.split('/')[0]));
     await this.operate(routes, route => `route delete ${route}`, progress);
+  }
+
+  static async getPossiblyAddedNetworkSet(): Promise<Set<string>> {
+    let routeTableOutput = await v.call(exec, 'route print');
+    let networkRegex = /^\s*\d+(?:\.\d+){3}/mg;
+    let possiblyAddedNetworks = (routeTableOutput.match(networkRegex) || []).map(network => network.trim());
+    return new Set(possiblyAddedNetworks);
   }
 }

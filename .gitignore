@@ -3,6 +3,5 @@
 /bld/
 /node_modules/
 
-/vpn-up.bat
-/vpn-down.bat
+/*.bat
 /routes.txt
