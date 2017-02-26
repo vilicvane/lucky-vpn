@@ -8,4 +8,5 @@
 /*.bat
 /routes.txt
 
+*.js.map
 .*
