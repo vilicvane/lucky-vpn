@@ -7,10 +7,14 @@ import * as v from 'villa';
 
 import { renderTemplate } from '../util';
 
-const TEMPLATES_DIR = Path.join(__dirname, `../../res/${process.platform}/script-templates`);
+const MODULE_PATH = Path.join(__dirname, '../..');
+const PLATFORM_RESOURCE_DIR = Path.join(MODULE_PATH, 'res', process.platform);
+const SCRIPT_TEMPLATES_DIR = Path.join(PLATFORM_RESOURCE_DIR, '/script-templates');
+const FILE_TEMPLATES_DIR = Path.join(PLATFORM_RESOURCE_DIR, '/file-templates');
+
 const APNIC_URL = 'https://ftp.apnic.net/apnic/stats/apnic/delegated-apnic-latest';
 
-export interface VPNScriptOptions {
+export interface VPNScriptsOptions {
   entry: string;
   username: string | undefined;
   password: string | undefined;
@@ -20,16 +24,16 @@ export interface VPNScriptOptions {
   dnsServers: string[] | undefined;
 }
 
-export type VPNScriptsGeneratingProgressHandler = (state: 'fetching' | 'generating', data?: any) => void;
+export type FileGeneratingProgressHandler = (state: 'fetching' | 'generating', data?: any) => void;
 
 export interface GeneratingProgressData {
   coverage: number;
   count: number;
 }
 
-export async function generateVPNScripts(options: VPNScriptOptions, progress: VPNScriptsGeneratingProgressHandler): Promise<string[]> {
+export async function generateFiles(options: VPNScriptsOptions, progress: FileGeneratingProgressHandler): Promise<string[]> {
   try {
-    await v.call(FS.stat, TEMPLATES_DIR);
+    await v.call(FS.stat, PLATFORM_RESOURCE_DIR);
   } catch (error) {
     throw new ExpectedError(`Current platform "${process.platform}" is not supported`);
   }
@@ -47,27 +51,43 @@ export async function generateVPNScripts(options: VPNScriptOptions, progress: VP
     count: routes.length
   } as GeneratingProgressData);
 
-  let scriptNames = await v.call(FS.readdir, TEMPLATES_DIR);
+  let scriptNames = await v.call(FS.readdir, SCRIPT_TEMPLATES_DIR);
+  let fileNames = await v.call(FS.readdir, FILE_TEMPLATES_DIR);
 
-  return v.map(scriptNames, async scriptName => {
-    let templatePath = Path.join(TEMPLATES_DIR, scriptName);
-    let targetPath = Path.resolve(scriptName);
-    let templateData = Object.assign({ routes }, data);
+  return v.map([
+    ...scriptNames.map(createTemplateInfoTransformer(SCRIPT_TEMPLATES_DIR, true)),
+    ...fileNames.map(createTemplateInfoTransformer(FILE_TEMPLATES_DIR, false))
+  ], async ({ targetPath, templatePath, script }) => {
+    let templateData = Object.assign({
+      cliPath: Path.join(MODULE_PATH, 'bld/cli.js'),
+      routes,
+      routesFile: Path.resolve('routes.txt')
+    }, data);
     let content = await renderTemplate(templatePath, templateData);
 
     await v.call(FS.writeFile, targetPath, content);
 
-    if (process.platform !== 'win32') {
+    if (script && process.platform !== 'win32') {
       await v.call(FS.chmod, targetPath, 0o755);
     }
 
     return Path.relative('.', targetPath);
   });
+
+  function createTemplateInfoTransformer(dir: string, script: boolean) {
+    return (fileName: string) => {
+      return {
+        templatePath: Path.join(dir, fileName),
+        targetPath: Path.resolve(fileName),
+        script
+      };
+    }
+  }
 }
 
 interface Route {
   network: string;
-  mask: string;
+  cidr: number;
 }
 
 interface RawRoute {
@@ -133,7 +153,7 @@ async function getChinaRoutes({ minSize }: GetRoutesOptions): Promise<RoutesInfo
     .map(route => {
       return {
         network: route.networkStr,
-        mask: convertIPv4IntegerToString(~(route.size - 1))
+        cidr: 32 - Math.log2(route.size)
       };
     });
 

@@ -1,17 +1,10 @@
 @echo off
 
 echo Disconnecting...
-
 rasdial /disconnect
 
 echo Removing routes...
-
-{{#each routes}}
-route delete {{network}} 1>nul
-{{#route-progress @index}}
-echo {{@index}}/{{../routes.length}}...
-{{/route-progress}}
-{{/each}}
+node "{{cliPath}}" route delete "{{routesFile}}" 1>nul
 
 echo Done.
 

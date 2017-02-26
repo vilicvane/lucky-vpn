@@ -5,6 +5,8 @@
 /bld/daemon/
 
 /tsconfig.json
-/*.bat
+/vpn-up.bat
+/vpn-down.bat
+/routes.txt
 
 .*

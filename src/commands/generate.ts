@@ -13,7 +13,7 @@ import {
 
 import * as v from 'villa';
 
-import { GeneratingProgressData, generateVPNScripts } from '../core';
+import { GeneratingProgressData, generateFiles } from '../core';
 
 export class GenerateOptions extends Options {
   @option({
@@ -87,7 +87,7 @@ export default class extends Command {
       }
     }
 
-    let generatedFileNames = await generateVPNScripts({
+    let generatedFileNames = await generateFiles({
       entry,
       username: options.username,
       password: options.password,

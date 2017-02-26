@@ -9,7 +9,6 @@ if errorlevel 1 (
 )
 {{/if}}
 
-echo Connecting {{entry}}...
 rasdial "{{entry}}"{{#if username}} "{{username}}"{{#if password}} "{{password}}"{{/if}}{{/if}}{{#if phonebook}} /phonebook:"{{phonebook}}"{{/if}} || goto :error
 
 {{#if dnsServers}}
@@ -24,7 +23,7 @@ echo Flushing DNS...
 ipconfig /flushdns 1>nul
 
 echo Querying gateway...
-for /F "tokens=3" %%* in ('route print ^| findstr "\<0.0.0.0\>"') do (
+for /F "tokens=3" %%* in ('route print 0.0.0.0 ^| findstr "\<0.0.0.0\>"') do (
   set "gateway=%%*"
   goto :gatewaySet
 )
@@ -35,12 +34,8 @@ exit /b 1
 :gatewaySet
 
 echo Adding routes...
-{{#each routes}}
-route add {{network}} mask {{mask}} %gateway% metric {{../routeMetric}} 1>nul
-{{#route-progress @index}}
-echo {{@index}}/{{../routes.length}}...
-{{/route-progress}}
-{{/each}}
+node "{{cliPath}}" route add "{{routesFile}}" %gateway% -m {{routeMetric}}
+
 echo Done.
 
 goto :eof
