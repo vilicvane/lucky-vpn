@@ -27,7 +27,7 @@ exit /b 1
 
 echo Adding routes...
 {{#each routes}}
-route add {{network}} mask {{mask}} %gw% metric {{../metric}} 1>nul 2>nul
+route add {{network}} mask {{mask}} %gw% metric {{../routeMetric}} 1>nul 2>nul
 {{#route-progress @index}}
 echo {{@index}}/{{../routes.length}}...
 {{/route-progress}}

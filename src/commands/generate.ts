@@ -13,7 +13,7 @@ import {
 
 import * as v from 'villa';
 
-import { generateVPNScripts } from '../core';
+import { GeneratingProgressData, generateVPNScripts } from '../core';
 
 export class GenerateOptions extends Options {
   @option({
@@ -21,7 +21,14 @@ export class GenerateOptions extends Options {
     description: 'Routing metric',
     default: 5
   })
-  metric: number;
+  routeMetric: number;
+
+  @option({
+    flag: 's',
+    description: 'Filter routes by minimum size',
+    default: Infinity
+  })
+  routeMinSize: number;
 
   @option({
     flag: 'b',
@@ -85,15 +92,19 @@ export default class extends Command {
       username: options.username,
       password: options.password,
       phonebook: phonebookPath,
-      metric: options.metric,
+      routeMetric: options.routeMetric,
+      routeMinSize: options.routeMinSize,
       dnsServers
-    }, state => {
+    }, (state, data?: GeneratingProgressData) => {
       switch (state) {
         case 'fetching':
           console.log('Fetching new routes data from APNIC...');
           break;
         case 'generating':
-          console.log('Generating VPN scripts...');
+          let { coverage, count } = data!;
+          let coveragePercentage = (coverage * 100).toFixed(2) + '%';
+          console.log(`Generating ${count} route rules in total after filtering (coverage: ${coveragePercentage})...`);
+          break;
       }
     });
 
