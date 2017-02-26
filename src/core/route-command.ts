@@ -9,7 +9,6 @@ const WINDOWS_OPERATION_GROUP_SIZE = 25;
 export type RouteCommandProgressHandler = (done: number, total: number) => void;
 
 export interface RouteCommandAddOptions {
-  gateway: string;
   metric: number;
 }
 
@@ -25,6 +24,11 @@ export abstract class RouteCommand {
         throw new ExpectedError(`This feature is not available on platform "${process.platform}"`);
     }
   }
+}
+
+interface RouteTableInfo {
+  addedNetworkSet: Set<string>;
+  gateway: string | undefined;
 }
 
 class WindowsRouteCommand implements RouteCommand {
@@ -71,21 +75,31 @@ class WindowsRouteCommand implements RouteCommand {
   }
 
   async add(routes: string[], options: RouteCommandAddOptions, progress: RouteCommandProgressHandler): Promise<void> {
-    let possiblyAddedNetworkSet = await WindowsRouteCommand.getPossiblyAddedNetworkSet();
-    routes = routes.filter(route => !possiblyAddedNetworkSet.has(route.split('/')[0]));
-    await this.operate(routes, route => `route add ${route} ${options.gateway} metric ${options.metric}`, progress);
+    let { addedNetworkSet, gateway } = await WindowsRouteCommand.getRouteTableInfo();
+
+    if (!gateway) {
+      throw new ExpectedError('Failed to query gateway');
+    }
+
+    routes = routes.filter(route => !addedNetworkSet.has(route.split('/')[0]));
+    await this.operate(routes, route => `route add ${route} ${gateway} metric ${options.metric}`, progress);
   }
 
   async delete(routes: string[], progress: RouteCommandProgressHandler): Promise<void> {
-    let possiblyAddedNetworkSet = await WindowsRouteCommand.getPossiblyAddedNetworkSet();
-    routes = routes.filter(route => possiblyAddedNetworkSet.has(route.split('/')[0]));
+    let { addedNetworkSet } = await WindowsRouteCommand.getRouteTableInfo();
+    routes = routes.filter(route => addedNetworkSet.has(route.split('/')[0]));
     await this.operate(routes, route => `route delete ${route}`, progress);
   }
 
-  static async getPossiblyAddedNetworkSet(): Promise<Set<string>> {
+  static async getRouteTableInfo(): Promise<RouteTableInfo> {
     let routeTableOutput = await v.call(exec, 'route print');
     let networkRegex = /^\s*\d+(?:\.\d+){3}/mg;
-    let possiblyAddedNetworks = (routeTableOutput.match(networkRegex) || []).map(network => network.trim());
-    return new Set(possiblyAddedNetworks);
+    let gatewayRegex = /^\s*0\.0\.0\.0\s+0\.0\.0\.0\s+(\d+(?:\.\d+){3})/m;
+    let addedNetworks = (routeTableOutput.match(networkRegex) || []).map(network => network.trim());
+    let gateway = (routeTableOutput.match(gatewayRegex) || [])[1];
+    return {
+      addedNetworkSet: new Set(addedNetworks),
+      gateway
+    };
   }
 }

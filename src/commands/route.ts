@@ -1,6 +1,7 @@
+import * as FS from 'fs';
 import * as Net from 'net';
+import * as OS from 'os';
 import * as Path from 'path';
-import * as Readline from 'readline';
 
 import {
   Command,
@@ -16,6 +17,9 @@ import * as v from 'villa';
 
 import { RouteCommand, RouteCommandProgressHandler } from '../core';
 
+const LOCK_FILE_PATH = Path.join(OS.tmpdir(), 'lucky-route-operation.lock');
+const LOCK_TIMEOUT = 30 * 60 * 1000;
+
 export class RouteOptions extends Options {
   @option({
     flag: 'm',
@@ -23,6 +27,12 @@ export class RouteOptions extends Options {
     default: 5
   })
   routeMetric: number;
+
+  @option({
+    description: 'Ignore operation lock and continue anyway',
+    toggle: true
+  })
+  force: boolean;
 }
 
 @command({
@@ -43,38 +53,40 @@ export default class extends Command {
     })
     file: ClimeObject.File,
 
-    @param({
-      description: 'Gateway',
-      validator: {
-        validate(address: string) {
-          if (!Net.isIPv4(address)) {
-            throw new ExpectedError('Invalid gateway');
-          }
-        }
-      }
-    })
-    gateway: string,
-
     options: RouteOptions
   ) {
-    if (operation === 'add' && !gateway) {
-      throw new ExpectedError('Gateway is required for operation "add"');
-    }
-
     await file.assert();
 
     let routes = (await file.text('ascii')).match(/.+/mg) || [];
+
+    let lockStats: FS.Stats | undefined;
+
+    try {
+      lockStats = await v.call(FS.stat, LOCK_FILE_PATH);
+    } catch (error) { }
+
+    if (lockStats) {
+      if (lockStats.mtime.getTime() + LOCK_TIMEOUT < Date.now()) {
+        await v.call(FS.unlink, LOCK_FILE_PATH);
+      } else if (!options.force) {
+        throw new ExpectedError('Route operation locked');
+      }
+    }
+
+    await v.call(FS.writeFile, LOCK_FILE_PATH, '');
 
     let routeCommand = RouteCommand.getCommand();
 
     switch (operation) {
       case 'add':
-        await routeCommand.add(routes, { gateway, metric: options.routeMetric }, createProgressLogger('add'));
+        await routeCommand.add(routes, { metric: options.routeMetric }, createProgressLogger('add'));
         break;
       case 'delete':
         await routeCommand.delete(routes, createProgressLogger('delete'));
         break;
     }
+
+    await v.call(FS.unlink, LOCK_FILE_PATH);
   }
 }
 

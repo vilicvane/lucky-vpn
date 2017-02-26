@@ -2,9 +2,13 @@
 
 Heavily inspired by [chnroutes](https://github.com/fivesheep/chnroutes).
 
+Works best under Windows.
+
 ## Installation
 
-Working in progress.
+```sh
+npm install -g lucky-vpn
+```
 
 ## Build
 
