@@ -1,7 +1,7 @@
 @echo off
 
 echo Removing routes...
-node "{{cliPath}}" route delete "{{routesFile}}" 1>nul
+node "{{cliPath}}" route delete "{{routesFile}}"
 
 goto :eof
 
