@@ -3,8 +3,8 @@ import { exec } from 'child_process';
 import { ExpectedError } from 'clime';
 import * as v from 'villa';
 
-const WINDOWS_OPERATION_CONCURRENCY = 4;
-const WINDOWS_OPERATION_GROUP_SIZE = 25;
+const WINDOWS_OPERATION_CONCURRENCY = 1;
+const WINDOWS_OPERATION_GROUP_SIZE = 100;
 
 export type RouteCommandProgressHandler = (done: number, total: number) => void;
 
