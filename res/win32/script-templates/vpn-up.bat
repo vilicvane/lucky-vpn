@@ -22,7 +22,7 @@ netsh interface ipv4 add dnsservers "{{../entry}}" {{this}} validate=no 1>nul
 echo Flushing DNS...
 ipconfig /flushdns 1>nul
 
-route-add.bat
+%~dp0route-add.bat
 
 goto :eof
 

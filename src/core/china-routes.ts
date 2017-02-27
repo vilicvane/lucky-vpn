@@ -56,8 +56,7 @@ export async function generateFiles(options: VPNScriptsOptions, progress: FileGe
   ], async ({ targetPath, templatePath, script }) => {
     let templateData = Object.assign({
       cliPath: Path.join(MODULE_PATH, 'bld/cli.js'),
-      routes,
-      routesFile: Path.resolve('routes.txt')
+      routes
     }, data);
     let content = await renderTemplate(templatePath, templateData);
 
