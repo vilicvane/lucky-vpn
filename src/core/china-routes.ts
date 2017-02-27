@@ -8,9 +8,11 @@ import * as v from 'villa';
 import { renderTemplate } from '../util';
 
 const MODULE_PATH = Path.join(__dirname, '../..');
-const PLATFORM_RESOURCE_DIR = Path.join(MODULE_PATH, 'res', process.platform);
-const SCRIPT_TEMPLATES_DIR = Path.join(PLATFORM_RESOURCE_DIR, '/script-templates');
-const FILE_TEMPLATES_DIR = Path.join(PLATFORM_RESOURCE_DIR, '/file-templates');
+const RESOURCES_DIR = Path.join(MODULE_PATH, 'res');
+const PLATFORM_RESOURCES_DIR = Path.join(RESOURCES_DIR, process.platform);
+const UNIVERSAL_RESOURCES_DIR = Path.join(RESOURCES_DIR, 'universal');
+const SCRIPT_TEMPLATES_DIR = Path.join(PLATFORM_RESOURCES_DIR, '/script-templates');
+const FILE_TEMPLATES_DIR = Path.join(UNIVERSAL_RESOURCES_DIR, '/file-templates');
 
 const APNIC_URL = 'https://ftp.apnic.net/apnic/stats/apnic/delegated-apnic-latest';
 
@@ -32,12 +34,6 @@ export interface GeneratingProgressData {
 }
 
 export async function generateFiles(options: VPNScriptsOptions, progress: FileGeneratingProgressHandler): Promise<string[]> {
-  try {
-    await v.call(FS.stat, PLATFORM_RESOURCE_DIR);
-  } catch (error) {
-    throw new ExpectedError(`Current platform "${process.platform}" is not supported`);
-  }
-
   let { routeMinSize, ...data } = options;
 
   progress('fetching');
@@ -51,8 +47,8 @@ export async function generateFiles(options: VPNScriptsOptions, progress: FileGe
     count: routes.length
   } as GeneratingProgressData);
 
-  let scriptNames = await v.call(FS.readdir, SCRIPT_TEMPLATES_DIR);
-  let fileNames = await v.call(FS.readdir, FILE_TEMPLATES_DIR);
+  let scriptNames = await v.call(FS.readdir, SCRIPT_TEMPLATES_DIR).catch(() => { }) || [];
+  let fileNames = await v.call(FS.readdir, FILE_TEMPLATES_DIR).catch(() => { }) || [];
 
   return v.map([
     ...scriptNames.map(createTemplateInfoTransformer(SCRIPT_TEMPLATES_DIR, true)),
