@@ -86,7 +86,18 @@ class WindowsRouteCommand implements RouteCommand {
       throw new ExpectedError('Failed to query gateway');
     }
 
-    routes = routes.filter(route => !addedNetworkSet.has(route.split('/')[0]));
+    routes = routes
+      .map(route => {
+        let parts = route.split('/');
+        return {
+          network: parts[0],
+          cidr: Number(parts[1])
+        };
+      })
+      .filter(route => !addedNetworkSet.has(route.network))
+      .sort((a, b) => a.cidr - b.cidr)
+      .map(route => `${route.network}/${route.cidr}`);
+
     await this.operate(routes, route => `route add ${route} ${gateway} metric ${options.metric}`, progress);
   }
 
