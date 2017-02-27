@@ -1,7 +1,7 @@
 {
   "name": "lucky-vpn",
   "version": "0.1.1",
-  "description": "Lucky VPN Utilities",
+  "description": "Windows-friendly utilities that generate automation scripts for VPN connection",
   "bin": {
     "lvpn": "bld/cli.js"
   },
