@@ -83,6 +83,7 @@ export async function generateFiles(options: VPNScriptsOptions, progress: FileGe
 
 interface Route {
   network: string;
+  netmask: string;
   cidr: number;
 }
 
@@ -149,6 +150,7 @@ async function getChinaRoutes({ minSize }: GetRoutesOptions): Promise<RoutesInfo
     .map(route => {
       return {
         network: route.networkStr,
+        netmask: convertIPv4IntegerToString(~(route.size - 1)),
         cidr: 32 - Math.log2(route.size)
       };
     });
