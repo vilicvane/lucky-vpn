@@ -47,8 +47,8 @@ export async function generateFiles(options: VPNScriptsOptions, progress: FileGe
     count: routes.length
   } as GeneratingProgressData);
 
-  let scriptNames = await v.call(FS.readdir, SCRIPT_TEMPLATES_DIR).catch(() => { }) || [];
-  let fileNames = await v.call(FS.readdir, FILE_TEMPLATES_DIR).catch(() => { }) || [];
+  let scriptNames = await v.call(FS.readdir, SCRIPT_TEMPLATES_DIR).catch(v.bear) || [];
+  let fileNames = await v.call(FS.readdir, FILE_TEMPLATES_DIR).catch(v.bear) || [];
 
   return v.map([
     ...scriptNames.map(createTemplateInfoTransformer(SCRIPT_TEMPLATES_DIR, true)),
