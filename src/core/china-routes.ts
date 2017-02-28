@@ -86,12 +86,6 @@ interface Route {
   cidr: number;
 }
 
-interface RawRoute {
-  networkStr: string;
-  network: number;
-  size: number;
-}
-
 interface GetRoutesOptions {
   minSize: number;
 }
@@ -105,21 +99,6 @@ async function getChinaRoutes({ minSize }: GetRoutesOptions): Promise<RoutesInfo
   let response = await fetch(APNIC_URL);
   let text = await response.text();
   let lines = text.match(/^apnic\|CN\|ipv4\|.+/mg) || [];
-
-  let rawRoutes: RawRoute[] = [];
-
-  for (let line of lines) {
-    let parts = line.split('|');
-    let networkStr = parts[3];
-    let network = convertIPv4StringToInteger(networkStr);
-    let size = Number(parts[4]);
-
-    rawRoutes.push({
-      networkStr,
-      network,
-      size
-    });
-  }
 
   let total = 0;
   let covered = 0;
