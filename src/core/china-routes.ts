@@ -107,12 +107,10 @@ async function getChinaRoutes({ minSize }: GetRoutesOptions): Promise<RoutesInfo
     .map(line => {
       let parts = line.split('|');
       let networkStr = parts[3];
-      let network = convertIPv4StringToInteger(networkStr);
       let size = Number(parts[4]);
 
       return {
         networkStr,
-        network,
         size
       };
     })
@@ -125,11 +123,11 @@ async function getChinaRoutes({ minSize }: GetRoutesOptions): Promise<RoutesInfo
         return false;
       }
     })
-    .map(route => {
+    .map(({ networkStr, size }) => {
       return {
-        network: route.networkStr,
-        netmask: convertIPv4IntegerToString(~(route.size - 1)),
-        cidr: 32 - Math.log2(route.size)
+        network: networkStr,
+        netmask: convertIPv4IntegerToString(~(size - 1)),
+        cidr: 32 - Math.log2(size)
       };
     });
 
