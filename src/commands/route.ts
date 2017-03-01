@@ -80,14 +80,41 @@ export default class extends Command {
 
       switch (operation) {
         case 'add':
-          await routeCommand.add(routes, { metric: options.routeMetric });
+          await routeCommand.add(routes, { metric: options.routeMetric }, createProgressLogger('add'));
           break;
         case 'delete':
-          await routeCommand.delete(routes);
+          await routeCommand.delete(routes, createProgressLogger('delete'));
           break;
       }
     } finally {
       await v.call(FS.unlink, LOCK_FILE_PATH);
     }
   }
+}
+
+function createProgressLogger(operation: 'add' | 'delete'): RouteCommandProgressHandler {
+  return (done, total) => {
+    if (done % 100 && done !== total) {
+      return;
+    }
+
+    let stdout = process.stdout;
+
+    if (done) {
+      stdout.write('\r');
+    }
+
+    switch (operation) {
+      case 'add':
+        stdout.write(`Added ${done}/${total}...`);
+        break;
+      case 'delete':
+        stdout.write(`Deleted ${done}/${total}...`);
+        break;
+    }
+
+    if (done === total) {
+      stdout.write('\n');
+    }
+  };
 }
