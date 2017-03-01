@@ -2,7 +2,7 @@
 
 Heavily inspired by [chnroutes](https://github.com/fivesheep/chnroutes).
 
-Currently Windows only.
+Most features are currently Windows only, you may use `lvpn generate -u` to generate `routes.txt` that contains networks allocated for China though.
 
 ## Installation
 
