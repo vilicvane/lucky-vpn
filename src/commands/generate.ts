@@ -17,6 +17,13 @@ import { GeneratingProgressData, generateFiles } from '../core';
 
 export class GenerateOptions extends Options {
   @option({
+    flag: 'n',
+    description: 'Generate universal files only',
+    toggle: true
+  })
+  universal: boolean;
+
+  @option({
     flag: 'm',
     description: 'Routing metric',
     default: 5
@@ -62,14 +69,14 @@ export class GenerateOptions extends Options {
 export default class extends Command {
   async execute(
     @param({
-      description: 'VPN entry name',
-      required: true
+      description: 'VPN entry name'
     })
-    entry: string,
+    entry: string | undefined,
 
     options: GenerateOptions
   ) {
-    let phonebook = options.phonebook;
+    let { phonebook, ...otherOptions } = options;
+
     let phonebookPath: string | undefined;
 
     if (phonebook) {
@@ -77,25 +84,18 @@ export default class extends Command {
       phonebookPath = phonebook.fullName;
     }
 
-    let dnsServers = options.dnsServers;
-
-    if (dnsServers) {
-      for (let server of dnsServers) {
+    if (options.dnsServers) {
+      for (let server of options.dnsServers) {
         if (!Net.isIPv4(server)) {
           throw new ExpectedError(`Invalid DNS server format "${server}"`);
         }
       }
     }
 
-    let generatedFileNames = await generateFiles({
-      entry,
-      username: options.username,
-      password: options.password,
-      phonebook: phonebookPath,
-      routeMetric: options.routeMetric,
-      routeMinSize: options.routeMinSize,
-      dnsServers
-    }, (state, data?: GeneratingProgressData) => {
+    let generatedFileNames = await generateFiles(Object.assign({
+      entry: entry,
+      phonebook: phonebookPath
+    }, otherOptions), (state, data?: GeneratingProgressData) => {
       switch (state) {
         case 'fetching':
           console.log('Fetching new routes data from APNIC...');
@@ -103,7 +103,7 @@ export default class extends Command {
         case 'generating':
           let { coverage, count } = data!;
           let coveragePercentage = (coverage * 100).toFixed(2) + '%';
-          console.log(`Generating ${count} route rules in total after filtering (coverage: ${coveragePercentage})...`);
+          console.log(`Generating ${count} route rules in total after merging and filtering (coverage: ${coveragePercentage})...`);
           break;
       }
     });

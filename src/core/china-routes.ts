@@ -16,8 +16,9 @@ const FILE_TEMPLATES_DIR = Path.join(UNIVERSAL_RESOURCES_DIR, '/file-templates')
 
 const APNIC_URL = 'https://ftp.apnic.net/apnic/stats/apnic/delegated-apnic-latest';
 
-export interface VPNScriptsOptions {
-  entry: string;
+export interface GeneratingOptions {
+  universal: boolean;
+  entry: string | undefined;
   username: string | undefined;
   password: string | undefined;
   phonebook: string | undefined;
@@ -33,7 +34,7 @@ export interface GeneratingProgressData {
   count: number;
 }
 
-export async function generateFiles(options: VPNScriptsOptions, progress: FileGeneratingProgressHandler): Promise<string[]> {
+export async function generateFiles(options: GeneratingOptions, progress: FileGeneratingProgressHandler): Promise<string[]> {
   let { routeMinSize, ...data } = options;
 
   progress('fetching');
@@ -47,7 +48,7 @@ export async function generateFiles(options: VPNScriptsOptions, progress: FileGe
     count: routes.length
   } as GeneratingProgressData);
 
-  let scriptNames = await v.call(FS.readdir, SCRIPT_TEMPLATES_DIR).catch(v.bear) || [];
+  let scriptNames = !options.universal && await v.call(FS.readdir, SCRIPT_TEMPLATES_DIR).catch(v.bear) || [];
   let fileNames = await v.call(FS.readdir, FILE_TEMPLATES_DIR).catch(v.bear) || [];
 
   return v.map([
@@ -58,6 +59,7 @@ export async function generateFiles(options: VPNScriptsOptions, progress: FileGe
       cliPath: Path.join(MODULE_PATH, 'bld/cli.js'),
       routes
     }, data);
+
     let content = await renderTemplate(templatePath, templateData);
 
     await v.call(FS.writeFile, targetPath, content);
@@ -80,9 +82,15 @@ export async function generateFiles(options: VPNScriptsOptions, progress: FileGe
   }
 }
 
+interface RawRoute {
+  network: number;
+  size: number;
+}
+
 interface Route {
   network: string;
   netmask: string;
+  size: number;
   cidr: number;
 }
 
@@ -104,18 +112,65 @@ async function getChinaRoutes({ minSize }: GetRoutesOptions): Promise<RoutesInfo
   let covered = 0;
 
   let routes: Route[] = lines
-    .map(line => {
+    .map<RawRoute>(line => {
       let parts = line.split('|');
-      let networkStr = parts[3];
+      let network = convertIPv4StringToInteger(parts[3]);
       let size = Number(parts[4]);
 
       return {
-        networkStr,
+        network,
         size
       };
     })
+    .reduce<RawRoute[]>((routes, route) => {
+      if (routes.length) {
+        let lastRoute = routes[routes.length - 1];
+        if (lastRoute.network + lastRoute.size === route.network) {
+          lastRoute.size += route.size;
+        } else {
+          routes.push(route);
+        }
+      } else {
+        routes.push(route);
+      }
+
+      return routes;
+    }, [])
+    .reduce<RawRoute[]>((routes, route) => {
+      let nextNetwork = route.network;
+      let remainingSize = route.size;
+
+      while (remainingSize) {
+        let nextSize = 0;
+
+        for (let i = 0; i < 32; i++) {
+          let size = Math.pow(2, i);
+
+          if (size > remainingSize) {
+            nextSize = Math.pow(2, i - 1);
+            break;
+          }
+
+          if (nextNetwork & 1 << i) {
+            nextSize = size;
+            break;
+          }
+        }
+
+        routes.push({
+          network: nextNetwork,
+          size: nextSize
+        });
+
+        nextNetwork += nextSize;
+        remainingSize -= nextSize;
+      }
+
+      return routes;
+    }, [])
     .filter(({ size }) => {
       total += size;
+
       if (size >= minSize) {
         covered += size;
         return true;
@@ -123,10 +178,11 @@ async function getChinaRoutes({ minSize }: GetRoutesOptions): Promise<RoutesInfo
         return false;
       }
     })
-    .map(({ networkStr, size }) => {
+    .map<Route>(({ network, size }) => {
       return {
-        network: networkStr,
+        network: convertIPv4IntegerToString(network),
         netmask: convertIPv4IntegerToString(~(size - 1)),
+        size,
         cidr: 32 - Math.log2(size)
       };
     });
