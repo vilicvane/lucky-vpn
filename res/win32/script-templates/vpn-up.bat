@@ -9,7 +9,7 @@ if errorlevel 1 (
 )
 {{/if}}
 
-rasdial "{{entry}}"{{#if username}} "{{username}}"{{#if password}} "{{password}}"{{/if}}{{/if}}{{#if phonebook}} /phonebook:"{{phonebook}}"{{/if}} || goto :error
+rasdial{{#if entry}} "{{entry}}"{{#if username}} "{{username}}"{{#if password}} "{{password}}"{{/if}}{{/if}}{{#if phonebook}} /phonebook:"{{phonebook}}"{{/if}}{{/if}} || goto :error
 
 {{#if dnsServers}}
 echo Overriding DNS servers...
