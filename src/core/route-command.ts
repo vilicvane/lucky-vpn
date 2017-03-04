@@ -1,10 +1,13 @@
-import { exec } from 'child_process';
+import { exec, spawn } from 'child_process';
+import * as Path from 'path';
 
 import { ExpectedError } from 'clime';
 import * as v from 'villa';
 
 const WINDOWS_OPERATION_CONCURRENCY = 1;
 const WINDOWS_OPERATION_GROUP_SIZE = 100;
+
+const NSETROUTE_SCRIPT_PATH = Path.join(__dirname, '../../res/win32/scripts/nsetroute.js');
 
 export type RouteCommandProgressHandler = (done: number, total: number) => void;
 
@@ -27,7 +30,7 @@ export abstract class RouteCommand {
 }
 
 interface RouteTableInfo {
-  addedNetworkSet: Set<string>;
+  existingNetworkSet: Set<string>;
   gateway: string | undefined;
 }
 
@@ -80,7 +83,7 @@ class WindowsRouteCommand implements RouteCommand {
   }
 
   async add(routes: string[], options: RouteCommandAddOptions, progress: RouteCommandProgressHandler): Promise<void> {
-    let { addedNetworkSet, gateway } = await WindowsRouteCommand.getRouteTableInfo();
+    let { existingNetworkSet, gateway } = await WindowsRouteCommand.getRouteTableInfo();
 
     if (!gateway) {
       throw new ExpectedError('Failed to query gateway');
@@ -94,7 +97,7 @@ class WindowsRouteCommand implements RouteCommand {
           cidr: Number(parts[1])
         };
       })
-      .filter(route => !addedNetworkSet.has(route.network))
+      .filter(route => !existingNetworkSet.has(route.network))
       .sort((a, b) => a.cidr - b.cidr)
       .map(route => `${route.network}/${route.cidr}`);
 
@@ -102,22 +105,24 @@ class WindowsRouteCommand implements RouteCommand {
   }
 
   async delete(routes: string[], progress: RouteCommandProgressHandler): Promise<void> {
-    let { addedNetworkSet } = await WindowsRouteCommand.getRouteTableInfo();
-    routes = routes.filter(route => addedNetworkSet.has(route.split('/')[0]));
+    let { existingNetworkSet } = await WindowsRouteCommand.getRouteTableInfo();
+    routes = routes.filter(route => existingNetworkSet.has(route.split('/')[0]));
     await this.operate(routes, route => `route delete ${route}`, progress);
   }
 
   static async getRouteTableInfo(): Promise<RouteTableInfo> {
-    let routeTableOutput = await v.call(exec, 'route print', {
-      maxBuffer: 5 * 1024 * 1024
-    });
-    let networkRegex = /^\s*\d+(?:\.\d+){3}/mg;
-    let gatewayRegex = /^\s*0\.0\.0\.0\s+0\.0\.0\.0\s+(\d+(?:\.\d+){3})/m;
-    let addedNetworks = (routeTableOutput.match(networkRegex) || []).map(network => network.trim());
-    let gateway = (routeTableOutput.match(gatewayRegex) || [])[1];
+    let json = '';
+
+    let cp = spawn('cscript', ['/nologo', NSETROUTE_SCRIPT_PATH, 'print']);
+    cp.stdout.on('data', (data: Buffer) => json += data.toString());
+
+    await v.awaitable(cp);
+
+    let data = JSON.parse(json);
+
     return {
-      addedNetworkSet: new Set(addedNetworks),
-      gateway
+      existingNetworkSet: new Set<string>(data.destinations),
+      gateway: data.gateway
     };
   }
 }
