@@ -146,7 +146,7 @@ function operationPrint() {
   var ageSum = 0;
   var count = 0;
   var defaults = [];
-  var destinations = [];
+  var validRoutes = [];
 
   for (var it = new Enumerator(routes); !it.atEnd(); it.moveNext()) {
     var item = it.item();
@@ -156,7 +156,7 @@ function operationPrint() {
       count++;
       defaults.push(item);
     } else {
-      destinations.push(destination);
+      validRoutes.push([destination, item.nextHop]);
     }
   }
 
@@ -171,15 +171,18 @@ function operationPrint() {
 
   var stdout = WScript.stdout;
 
-
   var gatewayJSON = defaultRoute ? '"' + defaultRoute.nextHop + '"' : 'null';
-  var destinationsJSON = '[' +
-    (destinations.length ? '"' + destinations.join('","') + '"' : '') +
-    ']';
+  var routeStrs = [];
+
+  for (var i = 0; i < validRoutes.length; i++) {
+    routeStrs.push('["' + validRoutes[i][0] + '","' + validRoutes[i][1] + '"]');
+  }
+
+  var routesJSON = '[' + routeStrs.join(',') + ']';
 
   stdout.write('{');
   stdout.write('"gateway":' + gatewayJSON + ',');
-  stdout.write('"destinations":' + destinationsJSON);
+  stdout.write('"routes":' + routesJSON);
   stdout.write('}');
 }
 

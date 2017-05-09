@@ -30,7 +30,7 @@ export abstract class RouteCommand {
 }
 
 interface RouteTableInfo {
-  existingNetworkSet: Set<string>;
+  existingNetworkMap: Map<string, string>;
   gateway: string | undefined;
 }
 
@@ -58,7 +58,7 @@ class WindowsRouteCommand implements RouteCommand {
     }, WINDOWS_OPERATION_CONCURRENCY);
   }
 
-  private async operate(routes: string[], transformer: (route: string) => string, progress: RouteCommandProgressHandler): Promise<void> {
+  private async operate<T>(routes: T[], transformer: (route: T) => string, progress: RouteCommandProgressHandler): Promise<void> {
     let singleTotal = routes.length;
 
     routes = routes.concat();
@@ -83,13 +83,13 @@ class WindowsRouteCommand implements RouteCommand {
   }
 
   async add(routes: string[], options: RouteCommandAddOptions, progress: RouteCommandProgressHandler): Promise<void> {
-    let { existingNetworkSet, gateway } = await WindowsRouteCommand.getRouteTableInfo();
+    let { existingNetworkMap, gateway } = await WindowsRouteCommand.getRouteTableInfo();
 
     if (!gateway) {
       throw new ExpectedError('Failed to query gateway');
     }
 
-    routes = routes
+    let routeItems = routes
       .map(route => {
         let parts = route.split('/');
         return {
@@ -97,16 +97,21 @@ class WindowsRouteCommand implements RouteCommand {
           cidr: Number(parts[1])
         };
       })
-      .filter(route => !existingNetworkSet.has(route.network))
-      .sort((a, b) => a.cidr - b.cidr)
-      .map(route => `${route.network}/${route.cidr}`);
+      .filter(route => existingNetworkMap.get(route.network) !== gateway)
+      .sort((a, b) => a.cidr - b.cidr);
 
-    await this.operate(routes, route => `route add ${route} ${gateway} metric ${options.metric}`, progress);
+    await this.operate(routeItems, route => {
+      if (existingNetworkMap.has(route.network)) {
+        return `route delete ${route.network} & route add ${route.network}/${route.cidr} ${gateway} metric ${options.metric}`;
+      } else {
+        return `route add ${route.network}/${route.cidr} ${gateway} metric ${options.metric}`;
+      }
+    }, progress);
   }
 
   async delete(routes: string[], progress: RouteCommandProgressHandler): Promise<void> {
-    let { existingNetworkSet } = await WindowsRouteCommand.getRouteTableInfo();
-    routes = routes.filter(route => existingNetworkSet.has(route.split('/')[0]));
+    let { existingNetworkMap } = await WindowsRouteCommand.getRouteTableInfo();
+    routes = routes.filter(route => existingNetworkMap.has(route.split('/')[0]));
     await this.operate(routes, route => `route delete ${route}`, progress);
   }
 
@@ -118,10 +123,13 @@ class WindowsRouteCommand implements RouteCommand {
 
     await v.awaitable(cp);
 
-    let data = JSON.parse(json);
+    let data: {
+      gateway: string;
+      routes: [string, string][];
+    } = JSON.parse(json);
 
     return {
-      existingNetworkSet: new Set<string>(data.destinations),
+      existingNetworkMap: new Map<string, string>(data.routes),
       gateway: data.gateway
     };
   }
